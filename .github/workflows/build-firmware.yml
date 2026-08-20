@@ -256,6 +256,7 @@ jobs:
           FIRMWARE_DATE=$(date +%Y%m%d)
           FIRMWARE_NAME="vincherwrt-${{ inputs.target }}-$FIRMWARE_DATE"
           echo "FIRMWARE_NAME=$FIRMWARE_NAME" >> $GITHUB_ENV
+          echo "FIRMWARE_DATE=$FIRMWARE_DATE" >> $GITHUB_ENV
           
           mkdir -p ${{ github.workspace }}/output
           
