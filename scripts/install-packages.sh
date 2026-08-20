@@ -42,10 +42,6 @@ if [ ! -d "$PACKAGE_DIR/luci-app-argon-config" ]; then
     git clone --depth=1 https://github.com/jerrykuku/luci-app-argon-config.git "$PACKAGE_DIR/luci-app-argon-config" 2>/dev/null || echo "  ⚠ argon config already exists"
 fi
 
-# Neobird Theme (removed - not needed)
-# if [ ! -d "$PACKAGE_DIR/luci-theme-neobird" ]; then
-#     git clone --depth=1 https://github.com/helmiau/luci-theme-neobird.git "$PACKAGE_DIR/luci-theme-neobird" 2>/dev/null || echo "  ⚠ neobird theme already exists"
-# fi
 # ----------------------------------------------------------
 # Docker
 # ----------------------------------------------------------

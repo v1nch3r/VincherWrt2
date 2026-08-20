@@ -26,7 +26,7 @@ on:
         required: true
         default: 'v1nch3r/openwrt-toolchain-builder'
       include_proxy:
-        description: 'Include proxy/VPN packages (OpenClash, Passwall, v2rayA)'
+        description: 'Include proxy/VPN packages (OpenClash, Passwall)'
         required: true
         type: boolean
         default: true
@@ -189,7 +189,7 @@ jobs:
           # If proxy disabled, remove proxy packages
           if [ "${{ inputs.include_proxy }}" = "false" ]; then
             echo "=== Disabling proxy packages ==="
-            sed -i '/openclash\|passwall\|v2raya\|ssr-plus/d' .config || true
+            sed -i '/openclash\|passwall\|ssr-plus/d' .config || true
           fi
           
           make defconfig
