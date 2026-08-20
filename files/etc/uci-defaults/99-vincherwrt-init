@@ -1,0 +1,84 @@
+#!/bin/sh
+# ============================================================
+# VincherWrt2 — First Boot Configuration
+# Runs ONCE on first boot after firmware flash
+# ============================================================
+
+# --- Hostname ---
+uci set system.@system[0].hostname='VincherWrt'
+uci set system.@system[0].timezone='Asia/Tokyo'
+uci set system.@system[0].zonename='Asia/Tokyo'
+uci commit system
+
+# --- WiFi ---
+uci set wireless.@wifi-device[0].disabled=0 2>/dev/null
+uci set wireless.@wifi-iface[0].ssid='VincherWrt' 2>/dev/null
+uci set wireless.@wifi-iface[0].encryption='psk2' 2>/dev/null
+uci commit wireless 2>/dev/null
+
+# --- Network (LAN) ---
+uci set network.lan.hostname='VincherWrt'
+uci commit network
+
+# --- DNS ---
+uci set network.lan.dns='1.1.1.1 8.8.8.8'
+uci commit network
+
+# --- Theme ---
+uci set luci.themes.Bootstrap='/usr/lib/lua/luci/themes/bootstrap'
+uci set luci.themes.Argon='/usr/lib/lua/luci/themes/argon'
+uci set luci.main.MediaBrowse='/usr/lib/lua/luci/themes/argon'
+uci commit luci
+
+# --- Firewall ---
+# Allow Docker traffic
+uci add firewall
+uci set firewall.@defaults[-1].input='ACCEPT'
+uci set firewall.@defaults[-1].output='ACCEPT'
+uci set firewall.@defaults[-1].forward='ACCEPT'
+uci commit firewall
+
+# --- Services ---
+# Enable Docker
+/etc/init.d/dockerd enable 2>/dev/null
+/etc/init.d/dockerman enable 2>/dev/null
+
+# Disable unused services
+/etc/init.d/stubby disable 2>/dev/null
+/etc/init.d/stunnel disable 2>/dev/null
+
+# --- Custom TTL (bypass tethering detection) ---
+TTL=65
+echo "net.ipv4.ip_default_ttl=$TTL" >> /etc/sysctl.conf
+sysctl -p /etc/sysctl.conf 2>/dev/null
+
+# --- Enable IPv6 ---
+uci set network.lan.ipv6='1'
+uci set dhcp.lan.ra='server'
+uci set dhcp.lan.dhcpv6='server'
+uci commit network
+uci commit dhcp
+
+# --- Disable opkg signature check (for custom repos) ---
+sed -i 's|option check_signature|# option check_signature|' /etc/opkg/distfeeds.conf 2>/dev/null
+
+# --- Enable filesystem check on boot ---
+sed -i 's|# *fsck fsck_order|fsck fsck_order|' /etc/config/fstab 2>/dev/null
+
+# --- Set banner ---
+cat > /etc/banner << 'BANNER'
+  ____   ___  ____  ____  ___   ___  __  __ ___  ___  ___
+ |  _ \ / _ \/ ___||  _ \| _ \ / _ \|  \/  || _ \/   \| __|
+ | |_) | |_) \___ \| |_) | |_) | | | | |\/| || |_/ | |) |__  |
+ |  _ <|  __/ ___) |  _ <|  _ <| |_| | |  | ||  __/|  _/  / /
+ |_| \_\_| |____/|_| \_\_| \_\\___/|_|  |_||_|   |_|  /___|
+
+   Custom OpenWrt Firmware | vincher.net
+BANNER
+
+# --- Cleanup ---
+# Remove Chinese language pack
+opkg remove luci-i18n-base-zh-cn 2>/dev/null || true
+
+echo "VincherWrt2 first-boot setup complete."
+exit 0

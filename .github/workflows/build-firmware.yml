@@ -1,0 +1,309 @@
+name: Build Firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target platform'
+        required: true
+        type: choice
+        options:
+          - armvirt64
+          - x86_64
+          - rockchip
+          - bcm27xx
+        default: armvirt64
+      source_repo:
+        description: 'OpenWrt source repo'
+        required: true
+        default: 'https://github.com/coolsnowwolf/lede'
+      source_branch:
+        description: 'Source branch'
+        required: true
+        default: 'master'
+      toolchain_repo:
+        description: 'Toolchain repo (owner/repo)'
+        required: true
+        default: 'v1nch3r/openwrt-toolchain-builder'
+      include_proxy:
+        description: 'Include proxy/VPN packages (OpenClash, Passwall, v2rayA)'
+        required: true
+        type: boolean
+        default: true
+      upload_release:
+        description: 'Upload to GitHub Release?'
+        required: true
+        type: boolean
+        default: true
+
+env:
+  TZ: UTC
+  BUILD_ROOT: /tmp/openwrt-build
+
+jobs:
+  build:
+    name: Build ${{ inputs.target }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    permissions:
+      contents: write
+
+    steps:
+      # ============================================================
+      # Step 1: Free up disk space
+      # ============================================================
+      - name: Free disk space
+        run: |
+          echo "=== Before cleanup ==="
+          df -h /
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/lib/firefox \
+            /usr/lib/google-cloud-sdk \
+            /usr/local/aws-cli \
+            /opt/pipx
+          sudo apt-get clean
+          sudo apt-get autoremove -y --purge
+          echo "=== After cleanup ==="
+          df -h /
+
+      # ============================================================
+      # Step 2: Install dependencies
+      # ============================================================
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential clang flex bison g++ gawk gcc-multilib \
+            g++-multilib gettext git libncurses-dev libssl-dev \
+            python3-distutils rsync unzip zlib1g-dev \
+            device-tree-compiler libelf-dev libdw-dev \
+            qemu-utils ccache
+
+      # ============================================================
+      # Step 3: Checkout this repo
+      # ============================================================
+      - name: Checkout VincherWrt2
+        uses: actions/checkout@v4
+
+      # ============================================================
+      # Step 4: Download pre-compiled toolchain
+      # ============================================================
+      - name: Download toolchain
+        run: |
+          echo "=== Downloading pre-compiled toolchain ==="
+          
+          # Find latest toolchain release for target
+          TOOLCHAIN_TAG=$(curl -s \
+            "https://api.github.com/repos/${{ inputs.toolchain_repo }}/releases" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            | python3 -c "
+          import json, sys
+          releases = json.load(sys.stdin)
+          target = '${{ inputs.target }}'
+          for r in releases:
+              for a in r.get('assets', []):
+                  if target in a['name'] and a['name'].endswith('.img.gz'):
+                      print(a['browser_download_url'])
+                      sys.exit(0)
+          sys.exit(1)
+          ")
+          
+          if [ -z "$TOOLCHAIN_TAG" ]; then
+            echo "❌ No toolchain found for target: ${{ inputs.target }}"
+            echo "Please build toolchain first at:"
+            echo "https://github.com/${{ inputs.toolchain_repo }}/actions"
+            exit 1
+          fi
+          
+          echo "Toolchain URL: $TOOLCHAIN_TAG"
+          mkdir -p ${{ env.BUILD_ROOT }}
+          cd ${{ env.BUILD_ROOT }}
+          
+          wget -q "$TOOLCHAIN_TAG" -O toolchain.img.gz
+          gunzip toolchain.img.gz
+          
+          echo "=== Mounting toolchain ==="
+          mkdir -p openwrt-ro overlay workdir openwrt
+          sudo mount -o loop toolchain.img openwrt-ro
+          sudo mount -t overlay overlay \
+            -o lowerdir=openwrt-ro,upperdir=overlay,workdir=workdir \
+            openwrt
+          
+          echo "OPENWRTROOT=$PWD/openwrt" >> $GITHUB_ENV
+          echo "=== Toolchain mounted at $PWD/openwrt ==="
+          ls -la openwrt/
+
+      # ============================================================
+      # Step 5: Setup feeds
+      # ============================================================
+      - name: Setup feeds
+        run: |
+          cd ${{ env.OPENWRTROOT }}
+          chmod +x ${{ github.workspace }}/scripts/setup-feeds.sh
+          bash ${{ github.workspace }}/scripts/setup-feeds.sh "$PWD"
+
+      # ============================================================
+      # Step 6: Install extra packages
+      # ============================================================
+      - name: Install extra packages
+        if: ${{ inputs.include_proxy }}
+        run: |
+          cd ${{ env.OPENWRTROOT }}
+          chmod +x ${{ github.workspace }}/scripts/install-packages.sh
+          bash ${{ github.workspace }}/scripts/install-packages.sh "$PWD"
+
+      # ============================================================
+      # Step 7: Copy custom files
+      # ============================================================
+      - name: Copy custom files
+        run: |
+          cd ${{ env.OPENWRTROOT }}
+          # Copy first-boot scripts
+          cp -a ${{ github.workspace }}/files/* files/ 2>/dev/null || true
+          chmod +x files/etc/uci-defaults/99-vincherwrt-init
+          chmod +x files/bin/vincherwrt-info 2>/dev/null || true
+          echo "=== Custom files copied ==="
+          find files/ -type f
+
+      # ============================================================
+      # Step 8: Apply configuration
+      # ============================================================
+      - name: Configure firmware
+        run: |
+          cd ${{ env.OPENWRTROOT }}
+          
+          # Start with target config
+          TARGET_CONFIG="${{ github.workspace }}/config/${{ inputs.target }}.conf"
+          UNIVERSAL_CONFIG="${{ github.workspace }}/config/universal.conf"
+          
+          # Merge configs
+          cat "$UNIVERSAL_CONFIG" > .config
+          echo "" >> .config
+          
+          # Add target-specific (skip universal include line)
+          grep -v "universal.conf" "$TARGET_CONFIG" >> .config || true
+          
+          # If proxy disabled, remove proxy packages
+          if [ "${{ inputs.include_proxy }}" = "false" ]; then
+            echo "=== Disabling proxy packages ==="
+            sed -i '/openclash\|passwall\|v2raya\|ssr-plus/d' .config || true
+          fi
+          
+          make defconfig
+          
+          echo "=== Configuration applied ==="
+          echo "--- Config summary ---"
+          grep -E "^CONFIG_TARGET|^CONFIG_PACKAGE_luci|^CONFIG_PACKAGE_docker" .config | head -30
+
+      # ============================================================
+      # Step 9: Build firmware
+      # ============================================================
+      - name: Build firmware
+        run: |
+          cd ${{ env.OPENWRTROOT }}
+          echo "=== Building firmware (this takes ~30 min) ==="
+          make -j$(nproc) V=s 2>&1 | tail -80
+          echo "=== Build complete ==="
+
+      # ============================================================
+      # Step 10: Package output
+      # ============================================================
+      - name: Package firmware
+        run: |
+          cd ${{ env.OPENWRTROOT }}
+          
+          FIRMWARE_DATE=$(date +%Y%m%d)
+          FIRMWARE_NAME="vincherwrt-${{ inputs.target }}-$FIRMWARE_DATE"
+          echo "FIRMWARE_NAME=$FIRMWARE_NAME" >> $GITHUB_ENV
+          
+          mkdir -p ${{ github.workspace }}/output
+          
+          # Find firmware files
+          echo "=== Finding firmware files ==="
+          find bin/ -name "*.img.gz" -o -name "*.tar.gz" -o -name "*.bin" | head -10
+          
+          # Copy firmware files
+          find bin/ \( -name "*.img.gz" -o -name "*.tar.gz" -o -name "*.bin" \) \
+            -exec cp {} ${{ github.workspace }}/output/ \; 2>/dev/null || true
+          
+          # Create info file
+          cat > ${{ github.workspace }}/output/firmware-info.txt << INFO
+          VincherWrt2 Firmware
+          ====================
+          Target: ${{ inputs.target }}
+          Date: $FIRMWARE_DATE
+          Source: ${{ inputs.source_repo }} @ ${{ inputs.source_branch }}
+          Proxy: ${{ inputs.include_proxy }}
+          
+          Installation:
+          1. Flash .img file to device (dd, balenaEtcher, etc.)
+          2. First boot will auto-configure:
+             - Hostname: VincherWrt
+             - Timezone: Asia/Tokyo
+             - WiFi SSID: VincherWrt
+             - DNS: 1.1.1.1, 8.8.8.8
+          3. Access LuCI at http://192.168.1.1
+          INFO
+          
+          echo "=== Output files ==="
+          ls -lh ${{ github.workspace }}/output/
+
+      # ============================================================
+      # Step 11: Upload artifacts
+      # ============================================================
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vincherwrt-${{ inputs.target }}
+          path: ${{ github.workspace }}/output/
+          retention-days: 7
+
+      # ============================================================
+      # Step 12: Upload to release
+      # ============================================================
+      - name: Upload to release
+        if: ${{ inputs.upload_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: vincherwrt-${{ inputs.target }}-${{ env.FIRMWARE_DATE }}
+          name: VincherWrt2 ${{ inputs.target }} (${{ env.FIRMWARE_DATE }})
+          body: |
+            ## VincherWrt2 Firmware — ${{ inputs.target }}
+            
+            | Info | Value |
+            |------|-------|
+            | Target | `${{ inputs.target }}` |
+            | Source | `${{ inputs.source_repo }}` |
+            | Branch | `${{ inputs.source_branch }}` |
+            | Proxy/VPN | ${{ inputs.include_proxy }} |
+            | Date | ${{ env.FIRMWARE_DATE }} |
+            
+            ### First Boot
+            - Hostname: `VincherWrt`
+            - Timezone: `Asia/Tokyo`
+            - WiFi SSID: `VincherWrt`
+            - DNS: `1.1.1.1, 8.8.8.8`
+            - LuCI: `http://192.168.1.1`
+          files: |
+            ${{ github.workspace }}/output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ============================================================
+      # Step 13: Summary
+      # ============================================================
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## 📦 VincherWrt2 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Info | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | \`${{ inputs.target }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source | \`${{ inputs.source_repo }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Proxy/VPN | ${{ inputs.include_proxy }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Date | ${{ env.FIRMWARE_DATE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY

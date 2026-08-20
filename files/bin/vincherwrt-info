@@ -1,0 +1,18 @@
+#!/bin/sh
+# ============================================================
+# VincherWrt2 — Quick info script
+# Shows system info on SSH login
+# ============================================================
+echo ""
+echo "============================================"
+echo "  VincherWrt2 - $(cat /etc/openwrt_release 2>/dev/null | grep DISTRIB_DESCRIPTION | cut -d"'" -f2)"
+echo "============================================"
+echo "  Host:    $(uci get system.@system[0].hostname 2>/dev/null)"
+echo "  Uptime:  $(uptime | sed 's/.*up/up/' | sed 's/,.*load/ | Load:/')"
+echo "  Memory:  $(free -m | awk '/Mem:/{printf "%dMB / %dMB (%.0f%%)", $3, $2, $3/$2*100}')"
+echo "  Disk:    $(df -h / | awk 'NR==2{printf "%s / %s (%s)", $3, $2, $5}')"
+echo "  CPU:     $(grep -c processor /proc/cpuinfo) cores"
+echo "  IP:      $(ip -4 addr show br-lan 2>/dev/null | grep inet | awk '{print $2}' | head -1)"
+echo "  Docker:  $(docker ps -q 2>/dev/null | wc -l) containers running"
+echo "============================================"
+echo ""

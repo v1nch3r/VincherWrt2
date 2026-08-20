@@ -1,0 +1,30 @@
+#!/bin/sh
+# ============================================================
+# VincherWrt2 — Boot Script
+# Runs on EVERY boot (via rc.local)
+# ============================================================
+
+# --- Custom TTL (bypass tethering detection) ---
+TTL=65
+echo $TTL > /proc/sys/net/ipv4/ip_default_ttl
+
+# --- Enable IPv6 forwarding ---
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding 2>/dev/null
+
+# --- Docker: ensure cgroup is mounted ---
+if [ ! -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+    mkdir -p /sys/fs/cgroup/memory 2>/dev/null
+    mount -t cgroup -o memory none /sys/fs/cgroup/memory 2>/dev/null
+fi
+
+# --- Network optimization ---
+# Increase max connections
+echo 65536 > /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null
+# BBR congestion control
+echo bbr > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null
+
+# --- Custom commands (add yours below) ---
+# Example: auto-start OpenClash
+# /etc/init.d/openclash start 2>/dev/null &
+
+exit 0
