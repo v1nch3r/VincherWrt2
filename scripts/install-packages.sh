@@ -3,7 +3,7 @@
 # VincherWrt2 — Install Extra Packages
 # Clone packages directly from git (for packages not in feeds)
 # ============================================================
-set -e
+set -uo pipefail
 
 OPENWRTROOT="${1:-/tmp/openwrt-build/openwrt}"
 PACKAGE_DIR="$OPENWRTROOT/package"

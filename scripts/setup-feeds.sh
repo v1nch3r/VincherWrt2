@@ -3,7 +3,7 @@
 # VincherWrt2 — Setup Feeds
 # Download and install package feeds from various sources
 # ============================================================
-set -e
+set -uo pipefail
 
 OPENWRTROOT="${1:-/tmp/openwrt-build/openwrt}"
 cd "$OPENWRTROOT"
@@ -35,17 +35,22 @@ src-git openclash https://github.com/vernesong/OpenClash.git;dev
 FEEDS
 
 echo "[3/4] Updating extra feeds..."
-./scripts/feeds update -a
+# Don't fail entire build if one feed fails
+./scripts/feeds update -a || {
+    echo "⚠ Some feeds failed to update, continuing..."
+}
 
 # ----------------------------------------------------------
 # 3. Install extra feeds
 # ----------------------------------------------------------
 echo "[4/4] Installing extra packages..."
-./scripts/feeds install -a
+./scripts/feeds install -a || {
+    echo "⚠ Some feeds failed to install, continuing..."
+}
 
 # ----------------------------------------------------------
 # 4. Install specific packages from extra feeds
-# ----------------------------------------------------------
+# --------------------------------------------------------
 echo "Installing specific packages from feeds..."
 PACKAGES=(
     # Proxy / VPN
