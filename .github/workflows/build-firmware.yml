@@ -158,6 +158,7 @@ jobs:
           # Handle both .tar.gz and .img.gz
           if [[ "$TOOLCHAIN_URL" == *.tar.gz ]]; then
             echo "=== Extracting .tar.gz toolchain ==="
+            mkdir -p ${{ env.BUILD_ROOT }}/openwrt/staging_dir
             tar -xzf toolchain-download -C ${{ env.BUILD_ROOT }}/openwrt/staging_dir
           else
             echo "=== Extracting .img.gz toolchain ==="
