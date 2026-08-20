@@ -197,10 +197,12 @@ jobs:
       - name: Copy custom files
         run: |
           cd ${{ env.OPENWRTROOT }}
+          # Create files directory if not exists
+          mkdir -p files/etc/uci-defaults files/bin
           # Copy first-boot scripts
-          cp -a ${{ github.workspace }}/files/* files/ 2>/dev/null || true
+          cp -a ${{ github.workspace }}/files/* files/
           chmod +x files/etc/uci-defaults/99-vincherwrt-init
-          chmod +x files/bin/vincherwrt-info 2>/dev/null || true
+          chmod +x files/bin/vincherwrt-info
           echo "=== Custom files copied ==="
           find files/ -type f
 
