@@ -26,7 +26,7 @@ fi
 
 # Passwall
 if [ ! -d "$PACKAGE_DIR/passwall" ]; then
-    git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall.git "$PACKAGE_DIR/passwall" 2>/dev/null || echo "  ⚠ passwall already exists or failed"
+    git clone --depth=1 https://github.com/Openwrt-Passwall/openwrt-passwall.git "$PACKAGE_DIR/passwall" 2>/dev/null || echo "  ⚠ passwall already exists or failed"
 fi
 
 # ----------------------------------------------------------

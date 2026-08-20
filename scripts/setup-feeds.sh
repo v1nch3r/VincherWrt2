@@ -30,7 +30,7 @@ cat >> feeds.conf.default << 'FEEDS'
 # VincherWrt2 extra feeds
 src-git kenzo https://github.com/kenzok8/openwrt-packages.git
 src-git small https://github.com/kenzok8/small.git
-src-git passwall https://github.com/xiaorouji/openwrt-passwall.git
+src-git passwall https://github.com/Openwrt-Passwall/openwrt-passwall.git
 src-git openclash https://github.com/vernesong/OpenClash.git;dev
 FEEDS
 
