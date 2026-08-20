@@ -23,7 +23,6 @@ Change `=y` to `# ... is not set` or remove the line:
 |---------|-----------|-------------|
 | OpenClash | `CONFIG_PACKAGE_luci-app-openclash` | Clash proxy manager |
 | Passwall | `CONFIG_PACKAGE_luci-app-passwall` | V2Ray/Xray proxy |
-| v2rayA | `CONFIG_PACKAGE_luci-app-v2raya` | V2Ray web UI |
 | OpenVPN | `CONFIG_PACKAGE_openvpn-openssl` | OpenVPN server/client |
 | WireGuard | `CONFIG_PACKAGE_wireguard-tools` | WireGuard VPN |
 | ZeroTier | `CONFIG_PACKAGE_luci-app-zerotier` | ZeroTier VPN |
@@ -38,7 +37,6 @@ Change `=y` to `# ... is not set` or remove the line:
 ### DNS
 | Package | Config key |
 |---------|-----------|
-| AdGuardHome | `CONFIG_PACKAGE_adguardhome` |
 | HTTPS-DNS-Proxy | `CONFIG_PACKAGE_https-dns-proxy` |
 | dnsmasq-full | `CONFIG_PACKAGE_dnsmasq-full` |
 
@@ -59,7 +57,6 @@ Change `=y` to `# ... is not set` or remove the line:
 | Package | Config key |
 |---------|-----------|
 | Argon | `CONFIG_PACKAGE_luci-theme-argon` |
-| Neobird | `CONFIG_PACKAGE_luci-theme-neobird` |
 
 ### System
 | Package | Config key |

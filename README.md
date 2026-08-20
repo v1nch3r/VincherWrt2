@@ -34,8 +34,7 @@ VincherWrt2/
 │   └── bcm27xx.conf           ← Raspberry Pi target
 ├── scripts/
 │   ├── setup-feeds.sh         ← Download & install package feeds
-│   ├── install-packages.sh    ← Clone extra packages
-│   └── preset-clash-core.sh   ← Clash core installer
+│   └── install-packages.sh    ← Clone extra packages
 ├── files/
 │   ├── bin/                   ← Custom binary scripts
 │   ├── etc/uci-defaults/      ← First-boot scripts
@@ -51,12 +50,12 @@ Default packages include:
 | Category | Packages |
 |----------|----------|
 | **Network** | luci, firewall, dnsmasq-full, wpad-openssl |
-| **VPN/Proxy** | openclash, passwall, v2rayA |
+| **VPN/Proxy** | openclash, passwall |
 | **Docker** | dockerman, docker-ce |
-| **DNS** | adguardhome |
+| **DNS** | https-dns-proxy, dnsmasq-full |
 | **Modem** | modemmanager, sms-tool |
 | **Tools** | htop, nano, curl, wget-ssl |
-| **Themes** | argon, neobird |
+| **Themes** | argon |
 | **File Share** | samba4, nfs-utils |
 
 ## Toolchain

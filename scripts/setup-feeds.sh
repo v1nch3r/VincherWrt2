@@ -32,7 +32,6 @@ src-git kenzo https://github.com/kenzok8/openwrt-packages.git
 src-git small https://github.com/kenzok8/small.git
 src-git passwall https://github.com/xiaorouji/openwrt-passwall.git
 src-git openclash https://github.com/vernesong/OpenClash.git;dev
-src-git v2raya https://github.com/v2raya/v2raya-openwrt.git
 FEEDS
 
 echo "[3/4] Updating extra feeds..."
@@ -53,16 +52,10 @@ PACKAGES=(
     luci-app-openclash
     luci-app-passwall
     luci-app-passwall-server
-    v2raya
-    luci-app-v2raya
     luci-app-ssr-plus
     luci-app-ssr-plus-server
 
-    # DNS
-    luci-app-adguardhome
-
     # Themes
-    luci-theme-neobird
     luci-theme-atmaterial
     luci-theme-edge
 
