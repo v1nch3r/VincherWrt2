@@ -4,7 +4,7 @@ Custom OpenWrt firmware builder powered by pre-compiled toolchain and GitHub Act
 
 ## Features
 
-- **Multi-target support** — armvirt64, x86_64, rockchip, bcm27xx
+- **Multi-target support** — armsr, x86_64, rockchip, bcm27xx
 - **Pre-compiled toolchain** — fast build (~30 min instead of 3+ hours)
 - **Modular package selection** — enable/disable features via config
 - **First-boot customization** — hostname, timezone, DNS, themes
@@ -15,7 +15,7 @@ Custom OpenWrt firmware builder powered by pre-compiled toolchain and GitHub Act
 
 1. Go to **Actions** tab → **Build Firmware**
 2. Click **Run workflow**
-3. Select target (armvirt64, x86_64, etc.)
+3. Select target (armsr, x86_64, etc.)
 4. Wait ~30 minutes
 5. Download from **Releases**
 
@@ -28,7 +28,7 @@ VincherWrt2/
 │   └── clean-releases.yml     ← Auto cleanup old releases
 ├── config/
 │   ├── universal.conf         ← Shared config (all targets)
-│   ├── armvirt64.conf         ← ARM64 target
+│   ├── armsr.conf            ← ARM64 target
 │   ├── x86_64.conf            ← x86_64 target
 │   ├── rockchip.conf          ← Rockchip target
 │   └── bcm27xx.conf           ← Raspberry Pi target

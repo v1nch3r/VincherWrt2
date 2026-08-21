@@ -8,11 +8,11 @@ on:
         required: true
         type: choice
         options:
-          - armvirt64
+          - armsr
           - x86_64
           - rockchip
           - bcm27xx
-        default: armvirt64
+        default: armsr
       source_repo:
         description: 'OpenWrt source repo'
         required: true
@@ -147,7 +147,7 @@ jobs:
           ls -la ${{ env.BUILD_ROOT }}/openwrt/staging_dir/
           
           # Verify the correct toolchain is present
-          # armvirt64 → aarch64, x86_64 → x86_64, rockchip → aarch64, bcm27xx → aarch64
+          # armsr → aarch64, x86_64 → x86_64, rockchip → aarch64, bcm27xx → aarch64
           TOOLCHAIN_DIR=$(ls ${{ env.BUILD_ROOT }}/openwrt/staging_dir/ | grep toolchain | head -1)
           echo "Toolchain dir: $TOOLCHAIN_DIR"
           
