@@ -222,11 +222,14 @@ jobs:
             sed -i '/openclash\|passwall\|ssr-plus/d' .config || true
           fi
           
-          make defconfig
+          # Use oldconfig (NOT defconfig — defconfig resets target to x86!)
+          yes '' | make oldconfig 2>/dev/null || true
           
           echo "=== Configuration applied ==="
+          echo "--- Target check ---"
+          grep -E "^CONFIG_TARGET_" .config | head -5
           echo "--- Config summary ---"
-          grep -E "^CONFIG_TARGET|^CONFIG_PACKAGE_luci|^CONFIG_PACKAGE_docker" .config | head -30
+          grep -E "^CONFIG_PACKAGE_luci|^CONFIG_PACKAGE_docker" .config | head -20
 
       # ============================================================
       # Step 9: Build firmware
@@ -260,6 +263,15 @@ jobs:
             echo "⚠ Some packages failed, continuing..."
           fi
           
+          echo "=== Installing packages (creates rootfs) ==="
+          make package/install -j$(nproc) 2>&1 | tail -30
+          INSTALL_PKG_EXIT=$?
+          if [ $INSTALL_PKG_EXIT -ne 0 ]; then
+            echo "❌ Package install failed!"
+            make package/install -j1 V=s 2>&1 | tail -50
+            exit 1
+          fi
+          
           echo "=== Building firmware image ==="
           make target/linux/install -j1 2>&1 | tail -50
           INSTALL_EXIT=$?
@@ -270,7 +282,7 @@ jobs:
           fi
           
           echo "=== Build complete ==="
-          echo "=== Exit codes: tools=$TOOLS_EXIT kernel=$KERNEL_EXIT packages=$PKG_EXIT install=$INSTALL_EXIT ==="
+          echo "=== Exit codes: tools=$TOOLS_EXIT kernel=$KERNEL_EXIT packages=$PKG_EXIT pkg_install=$INSTALL_PKG_EXIT image=$INSTALL_EXIT ==="
 
       # ============================================================
       # Step 10: Package output
