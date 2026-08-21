@@ -234,8 +234,24 @@ jobs:
       - name: Build firmware
         run: |
           cd ${{ env.OPENWRTROOT }}
+          
+          # Mark toolchain as already compiled (skip recompiling)
+          # The pre-compiled toolchain is already in staging_dir
+          for stamp in staging_dir/toolchain-*/stamp/.toolchain_compile \
+                       staging_dir/toolchain-*/stamp/.gdb_installed \
+                       staging_dir/toolchain-*/stamp/*.installed; do
+            if [ -f "$stamp" ]; then
+              echo "Stamp exists: $stamp"
+            else
+              mkdir -p "$(dirname "$stamp")"
+              touch "$stamp"
+              echo "Created stamp: $stamp"
+            fi
+          done
+          
           echo "=== Building firmware (this takes ~30 min) ==="
-          make -j$(nproc) V=s 2>&1 | tail -80
+          make -j$(nproc) 2>&1 | tail -100
+          echo "=== Build exit code: $? ==="
           echo "=== Build complete ==="
 
       # ============================================================
@@ -254,10 +270,14 @@ jobs:
           
           # Find firmware files
           echo "=== Finding firmware files ==="
-          find bin/ -name "*.img.gz" -o -name "*.tar.gz" -o -name "*.bin" | head -10
+          find bin/ -type f \( -name "*.img.gz" -o -name "*.tar.gz" -o -name "*.bin" -o -name "*.img" -o -name "*.squashfs" -o -name "*rootfs*" -o -name "*kernel*" \) | head -20
+          
+          # Show all files in bin/targets
+          echo "=== All files in bin/targets ==="
+          find bin/targets/ -type f 2>/dev/null | head -30
           
           # Copy firmware files
-          find bin/ \( -name "*.img.gz" -o -name "*.tar.gz" -o -name "*.bin" \) \
+          find bin/ \( -name "*.img.gz" -o -name "*.tar.gz" -o -name "*.bin" -o -name "*.img" \) \
             -exec cp {} ${{ github.workspace }}/output/ \; 2>/dev/null || true
           
           # Create info file
