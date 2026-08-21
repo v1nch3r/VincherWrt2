@@ -235,24 +235,41 @@ jobs:
         run: |
           cd ${{ env.OPENWRTROOT }}
           
-          # Mark toolchain as already compiled (skip recompiling)
-          # The pre-compiled toolchain is already in staging_dir
-          for stamp in staging_dir/toolchain-*/stamp/.toolchain_compile \
-                       staging_dir/toolchain-*/stamp/.gdb_installed \
-                       staging_dir/toolchain-*/stamp/*.installed; do
-            if [ -f "$stamp" ]; then
-              echo "Stamp exists: $stamp"
-            else
-              mkdir -p "$(dirname "$stamp")"
-              touch "$stamp"
-              echo "Created stamp: $stamp"
-            fi
-          done
+          echo "=== Building tools (host) ==="
+          make tools/compile -j$(nproc) 2>&1 | tail -30
+          TOOLS_EXIT=$?
+          if [ $TOOLS_EXIT -ne 0 ]; then
+            echo "⚠ Tools build had issues, trying with V=s..."
+            make tools/compile -j1 V=s 2>&1 | tail -30
+          fi
           
-          echo "=== Building firmware (this takes ~30 min) ==="
-          make -j$(nproc) 2>&1 | tail -100
-          echo "=== Build exit code: $? ==="
+          echo "=== Building kernel ==="
+          make target/linux/compile -j$(nproc) 2>&1 | tail -30
+          KERNEL_EXIT=$?
+          if [ $KERNEL_EXIT -ne 0 ]; then
+            echo "❌ Kernel build failed!"
+            make target/linux/compile -j1 V=s 2>&1 | tail -50
+            exit 1
+          fi
+          
+          echo "=== Building packages ==="
+          make package/compile -j$(nproc) 2>&1 | tail -50
+          PKG_EXIT=$?
+          if [ $PKG_EXIT -ne 0 ]; then
+            echo "⚠ Some packages failed, continuing..."
+          fi
+          
+          echo "=== Building firmware image ==="
+          make target/linux/install -j1 2>&1 | tail -50
+          INSTALL_EXIT=$?
+          if [ $INSTALL_EXIT -ne 0 ]; then
+            echo "❌ Image build failed!"
+            make target/linux/install -j1 V=s 2>&1 | tail -50
+            exit 1
+          fi
+          
           echo "=== Build complete ==="
+          echo "=== Exit codes: tools=$TOOLS_EXIT kernel=$KERNEL_EXIT packages=$PKG_EXIT install=$INSTALL_EXIT ==="
 
       # ============================================================
       # Step 10: Package output
