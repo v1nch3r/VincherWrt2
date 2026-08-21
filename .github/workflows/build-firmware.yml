@@ -158,7 +158,7 @@ jobs:
           
           # Check if cross-compiler exists
           CROSS_GCC=$(find ${{ env.BUILD_ROOT }}/openwrt/staging_dir/$TOOLCHAIN_DIR/bin/ -name "*gcc*" | head -1)
-          if [ -z "$CROSS_GCC"" ]; then
+          if [ -z "$CROSS_GCC" ]; then
             echo "⚠ No cross-compiler found in $TOOLCHAIN_DIR, build may compile toolchain from source"
           else
             echo "✅ Cross-compiler found: $CROSS_GCC"
