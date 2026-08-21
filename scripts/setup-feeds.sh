@@ -22,17 +22,24 @@ echo "[1/4] Updating default feeds..."
 # ----------------------------------------------------------
 # 2. Extra feeds (community repos — all verified active)
 # ----------------------------------------------------------
+# Check if feed already exists before adding
+add_feed() {
+    local name=$1
+    local url=$2
+    if grep -q "^src-git $name " feeds.conf.default 2>/dev/null; then
+        echo "  ⚠ Feed '$name' already exists, skipping"
+    else
+        echo "src-git $name $url" >> feeds.conf.default
+        echo "  ✅ Added feed: $name"
+    fi
+}
+
 echo "[2/4] Adding community feeds..."
-
-cat >> feeds.conf.default << 'FEEDS'
-
-# VincherWrt2 extra feeds
-src-git kenzo https://github.com/kenzok8/openwrt-packages.git
-src-git small https://github.com/kenzok8/small.git
-src-git passwall https://github.com/Openwrt-Passwall/openwrt-passwall.git
-src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git
-src-git openclash https://github.com/vernesong/OpenClash.git;dev
-FEEDS
+add_feed "kenzo" "https://github.com/kenzok8/openwrt-packages.git"
+add_feed "small" "https://github.com/kenzok8/small.git"
+add_feed "passwall" "https://github.com/Openwrt-Passwall/openwrt-passwall.git"
+add_feed "passwall_packages" "https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git"
+add_feed "openclash" "https://github.com/vernesong/OpenClash.git;dev"
 
 echo "[3/4] Updating extra feeds..."
 ./scripts/feeds update -a
