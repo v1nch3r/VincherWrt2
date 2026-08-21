@@ -225,11 +225,33 @@ jobs:
           # Use oldconfig (NOT defconfig — defconfig resets target to x86!)
           yes '' | make oldconfig 2>/dev/null || true
           
+          # Force enable packages that make oldconfig disables (default=N)
+          # This is needed because oldconfig answers new prompts with default (N)
+          echo "=== Force enabling packages ==="
+          for pkg in passwall luci-app-passwall luci-app-passwall-server luci-app-modeminfo \
+                     dns2socks tcping shadowsocks-rust-sslocal shadowsocks-rust-ssserver \
+                     shadowsocks-rust-ssservice simple-obfs-client sing-box xray-core \
+                     kmod-inet-diag kmod-netlink-diag; do
+            sed -i "s/# CONFIG_PACKAGE_${pkg} is not set/CONFIG_PACKAGE_${pkg}=y/" .config
+          done
+          
+          # Disable passwall optional includes (heavy deps that fail to compile)
+          for opt in Haproxy Hysteria NaiveProxy Shadow_TLS tuic_client V2ray_Geodata V2ray_Geoview V2ray_Plugin Xray_Plugin; do
+            sed -i "s/CONFIG_PACKAGE_luci-app-passwall_INCLUDE_${opt}=y/# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_${opt} is not set/" .config
+          done
+          
+          # Disable OpenClash (needs ruby which fails to compile) and Diskman (parted dependency hell)
+          # Users can install these via opkg later if needed
+          for pkg in openclash luci-app-openclash ruby ruby-yaml luci-app-diskman parted smartmontools dosfstools haproxy; do
+            sed -i "s/CONFIG_PACKAGE_${pkg}=y/# CONFIG_PACKAGE_${pkg} is not set/" .config
+          done
+          sed -i "s/CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs=y/# CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs is not set/" .config
+          
           echo "=== Configuration applied ==="
           echo "--- Target check ---"
           grep -E "^CONFIG_TARGET_" .config | head -5
-          echo "--- Config summary ---"
-          grep -E "^CONFIG_PACKAGE_luci|^CONFIG_PACKAGE_docker" .config | head -20
+          echo "--- Key packages ---"
+          grep -E "passwall|sing-box|xray-core|modeminfo|docker" .config | grep "=y" | head -15
 
       # ============================================================
       # Step 9: Build firmware
