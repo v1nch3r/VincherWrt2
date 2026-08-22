@@ -35,6 +35,15 @@ on:
         required: true
         type: boolean
         default: true
+      repack_amlogic:
+        description: 'Repack rootfs for Amlogic TV boxes (s905x, s905x3, etc)?'
+        required: true
+        type: boolean
+        default: false
+      amlogic_boards:
+        description: 'Amlogic boards to build (space-separated: s905x s905x3 s912 s905d)'
+        required: false
+        default: 's905x'
 
 env:
   TZ: UTC
@@ -315,6 +324,39 @@ jobs:
           echo "=== Exit codes: tools=$TOOLS_EXIT kernel=$KERNEL_EXIT packages=$PKG_EXIT pkg_install=$INSTALL_PKG_EXIT image=$INSTALL_EXIT ==="
 
       # ============================================================
+      # Step 9.5: Repack for Amlogic TV boxes
+      # ============================================================
+      - name: Repack for Amlogic
+        if: ${{ inputs.repack_amlogic && inputs.target == 'armsr' }}
+        run: |
+          set -e
+          echo "=== Installing repack dependencies ==="
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq parted btrfs-progs dosfstools pigz bsdmainutils util-linux
+  
+          echo "=== Cloning ophub remake tool ==="
+          cd /tmp
+          git clone --depth=1 https://github.com/ophub/amlogic-s9xxx-openwrt.git
+          cd amlogic-s9xxx-openwrt
+  
+          echo "=== Copying VincherWrt2 rootfs ==="
+          mkdir -p openwrt-armsr
+          cp ${{ env.OPENWRTROOT }}/bin/targets/armsr/armv8/openwrt-armsr-armv8-generic-rootfs.tar.gz openwrt-armsr/
+          ls -lh openwrt-armsr/
+  
+          echo "=== Patching cp --update=none for Ubuntu 22.04 ==="
+          sed -i 's/--update=none//g' remake
+  
+          echo "=== Running remake for ${{ inputs.amlogic_boards }} ==="
+          chmod +x remake
+          ./remake -b "${{ inputs.amlogic_boards }}" -a true 2>&1
+  
+          echo "=== Copy repack output ==="
+          mkdir -p ${{ github.workspace }}/output/amlogic
+          cp openwrt/out/*.img.gz ${{ github.workspace }}/output/amlogic/ 2>/dev/null || echo "No amlogic output"
+          ls -lh ${{ github.workspace }}/output/amlogic/
+
+      # ============================================================
       # Step 10: Package output
       # ============================================================
       - name: Package firmware
@@ -390,7 +432,14 @@ jobs:
             | Source | `${{ inputs.source_repo }}` |
             | Branch | `${{ inputs.source_branch }}` |
             | Proxy/VPN | ${{ inputs.include_proxy }} |
+            | Amlogic Repack | ${{ inputs.repack_amlogic }} |
             | Date | ${{ env.FIRMWARE_DATE }} |
+            
+            ### Packages (573+)
+            - OpenClash, Passwall (all 17 packages), SSR-Plus
+            - Docker + Dockerman, Diskman (sbwml)
+            - Modeminfo, WireGuard, OpenVPN
+            - Theme Argon, TurboACC, VLMCSD
             
             ### First Boot
             - Hostname: `VincherWrt`
@@ -398,6 +447,11 @@ jobs:
             - WiFi SSID: `VincherWrt`
             - DNS: `1.1.1.1, 8.8.8.8`
             - LuCI: `http://192.168.1.1`
+            
+            ### Files
+            - `*.img.gz` — Armsr EFI firmware (flash to USB/SD)
+            - `amlogic/*.img.gz` — Amlogic TV box firmware (flash to USB → install to eMMC)
+            - `*rootfs.tar.gz` — Rootfs only (for custom repack)
           files: |
             ${{ github.workspace }}/output/*
         env:
