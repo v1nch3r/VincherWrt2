@@ -67,7 +67,7 @@ echo "  ✅ luci-app-sms-tool"
 # ----------------------------------------------------------
 echo "[5/5] Cloning disk/file packages..."
 
-git clone --depth=1 https://github.com/lisaac/luci-app-diskman.git "$PACKAGE_DIR/luci-app-diskman"
+git clone --depth=1 https://github.com/sbwml/luci-app-diskman.git "$PACKAGE_DIR/luci-app-diskman"
 echo "  ✅ luci-app-diskman"
 
 # ----------------------------------------------------------
