@@ -252,7 +252,7 @@ jobs:
           done
           
           # Disable Diskman (parted/libparted dependency chain too deep)
-          for pkg in luci-app-diskman parted smartmontools dosfstools haproxy; do
+          for pkg in luci-app-diskman parted smartmontools dosfstools; do
             sed -i "s/CONFIG_PACKAGE_${pkg}=y/# CONFIG_PACKAGE_${pkg} is not set/" .config
           done
           sed -i "s/CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs=y/# CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs is not set/" .config
